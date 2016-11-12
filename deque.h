@@ -2,15 +2,14 @@
 
 template <typename T>
 class Deque {
-    static uint32_t MIN_SIZE;
-    static uint16_t EXP_CONST;
+    static const uint32_t MIN_SIZE = 8;
+    static const uint16_t EXP_CONST = 2;
     T* container;
     uint32_t real_size;
     uint32_t first;
     uint32_t last;
-protected:
     void makeNext(uint32_t& i) const {
-        i = (i + 1)%(real_size);
+        i = (i + 1) % (real_size);
     }
     void makePrevious(uint32_t& i) const {
         i = (i - 1 + real_size) % real_size;
@@ -32,7 +31,7 @@ protected:
         }
     }
 
-    void tryMinimize () {
+    void tryMinimize() {
         if (size() * EXP_CONST * EXP_CONST < real_size) {
             T *new_container = new T[real_size / EXP_CONST];
             real_size /= EXP_CONST;
@@ -66,44 +65,59 @@ public:
 
 
     template <typename _T>
-    class DequeIterator: public std::iterator <std::random_access_iterator_tag, T> {
+    class DequeIterator : public std::iterator <std::random_access_iterator_tag, T> {
         uint32_t index;
         const Deque<T>* my_deque;
+        void makeNext(uint32_t& i) const {
+            i = (i + 1) % (my_deque->real_size);
+        }
+        void makePrevious(uint32_t& i) const {
+            i = (i - 1 + my_deque->real_size) % my_deque->real_size;
+        }
 
     public:
-        DequeIterator (uint32_t ind, const Deque<T>* deq) : index(ind), my_deque(deq) {}
-        DequeIterator (const DequeIterator& x) : index(x.index), my_deque(x.my_deque) {}
+        DequeIterator(uint32_t ind, const Deque<T>* deq) : index(ind), my_deque(deq) {}
+        DequeIterator(const DequeIterator& x) : index(x.index), my_deque(x.my_deque) {}
 
         DequeIterator& operator ++ () {
-            Deque::makeNext(index);
+            makeNext(index);
             return *this;
         }
         DequeIterator& operator -- () {
-            --index;
+            makePrevious(index);
             return *this;
         }
         DequeIterator& operator += (int n) {
-            index += n;
+            index += n - 1;
+            makeNext(index);
             return *this;
         }
         DequeIterator& operator -= (int n) {
-            index -= n;
+            index -= n - 1;
+            makePrevious(index);
             return *this;
         }
         int operator - (const DequeIterator& a) const {
-            return index - a.index;
+            return (index - a.index);
         }
         bool operator <(const DequeIterator& a) const {
-            return index < a.index;
+            if (my_deque->first < my_deque->last)
+                return index < a.index;
+            if (my_deque->first <= index && my_deque->first <= a.index)
+                return index < a.index;
+            if (my_deque->last > index && my_deque->last > a.index)
+                return index < a.index;
+            return my_deque->first <= index;
+
         }
         bool operator >(const DequeIterator& a) const {
-            return index > a.index;
+            return a < *this;
         }
         bool operator <=(const DequeIterator& a) const {
-            return index <= a.index;
+            return !(a < *this);
         }
         bool operator >=(const DequeIterator& a) const {
-            return index >= a.index;
+            return !(*this < a);
         }
         bool operator ==(const DequeIterator& a) const {
             return index == a.index;
@@ -147,21 +161,21 @@ public:
         return (last - first + real_size) % real_size;
     }
 
-    void push_back(T& x) {
+    void push_back(const T x) {
         tryExtend();
         container[last] = x;
         makeNext(last);
     }
-    void push_front(T& x) {
+    void push_front(const T x) {
         tryExtend();
         makePrevious(first);
         container[first] = x;
     }
-    void pop_back(T& x) {
+    void pop_back() {
         makePrevious(last);
         tryMinimize();
     }
-    void pop_front(T& x) {
+    void pop_front() {
         makeNext(first);
         tryMinimize();
     }
@@ -215,14 +229,4 @@ public:
     }
 
 
-
-
 };
-uint32_t Deque::MIN_SIZE = 8;
-uint16_t Deque::EXP_CONST = 2;
-
-
-int main() {
-    Deque deq;
-    return 0;
-}
